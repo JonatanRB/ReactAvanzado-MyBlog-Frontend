@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { useForm } from 'react-hook-form';
 import client from '../api/client';
-import './Login.css'
 
 export default function Login() {
     const { register, handleSubmit, forState: {errors}} = useForm();
