@@ -1,122 +1,137 @@
-import {
-    Card, CardHeader, CardTitle, CardDescription, CardContent
-} from '@/components/ui/card';
-import {Input} from '@/components/ui/input';
-import {Buttom} from '@/components/ui/buttom';
-import {Label} from '@/components/ui/label';
-import {Textarea} from '@/components/ui/textarea';
-import { useEffect, useState } from 'react';
-import { useForm } from "react-hook-form";
-import client from "../api/client";
+import { useEffect, useState } from 'react'
+import client from '../api/client'
+import { useUser } from '../context/UserContext'
 
-import { Toaster } from '@/components/ui/toaster';
-import { useToast } from '@/components/ui/use-toast';
-
-export default function PostList () {
-    const { user, login, logout } = useState();
-    const [posts, setPosts] = useState([]);
-    const { toast } = useToast();
-    const [filter, setFilter] = useState('');
-
-    const {
-        register,
-        handleSubmit, 
-        formState: {errors},
-        reset,
-    } = useForm();
-
-    const {
-        register: registerAuth,
-        handleSubmit: handleAuthSubmit,
-        reset: resetAuth, 
-    } = useForm();
-
-    const fetchPosts = async () => {
-        try{
-            const res = await client.get("./post");
-            setPosts(res.data);
-        }catch(err){
-            toast({title: 'Error al cargar posts'});
-        }
-    }
-
-    const handleCreatePosy = async (data) => {
-        try{
-            await client.post("/post", {
-                ...data,
-                user_id: user._id,
-            });
-            toast({title: 'Post creado correctamente'});
-            reset();
-            fetchPosts();
-        }catch (err) {
-            toast({title: 'Error al crear post'});
-        }
-    };
-
-    const handleLogin = async (data) => {
-        try {
-            const res = await client.post("/user/login", data);
-            login({email: res.data.email, password: res.data.password,});
-            toast({title: 'Sesion iniciada'});
-            resetAuth();
-            fetchPosts();
-        }catch(err){
-            toast({title:'Error en iniciar sesion'})
-        }
-    };
-
-    const handleRegister = async (data) => {
-        try {
-            const res = await client.post("/user/register", data);
-            login({ email: res.data.email, password: res.data.password})
-            toast({title: "Registrado con exitos"});
-            resetAuth();
-            fetchPosts();
-        }catch (err) {
-            toast({ title: "Error al registrarse"});
-        }
-    };
-
-    const filteredPosts = posts.filter((p) => 
-        p.title.toLowerCase().includes(filter.toLocaleLowerCase())
-    );
+function PostList() {
+    const { user } = useUser()
+    const [posts, setPosts] = useState([])
+    const [title, setTitle] = useState('')
+    const [content, setContent] = useState('')
+    const [editPostId, setEditPostId] = useState(null)
 
     useEffect(() => {
-        fetchPosts();
-    }, []);
+    fetchPosts()
+    }, [])
 
-    return (
-        <div className='p-4 max-w-3xl mx-auto space-y-4'>
-            <Toaster />
-            {!user ? (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Accede o Regístrate</CardTitle>
-                        <CardDescription>Con tu email y contraseña</CardDescription>
-                        <CardContent className='space-y-2'>
-                            <form onSubmit={handleAuthSubmit(handleLogin)} className='space-y-2'>
-                                <label>Email</label>
-                                <Input {...registerAuth("email", {required: true})} />
-                                <label>Password</label>
-                                <Input 
-                                    type="password"
-                                    {...registerAuth("password", {required: true})}
-                                />
-                                <Buttom className='w-full' type="submit">
-                                    Iniciar Sesión
-                                </Buttom>
-                            </form>
-                        </CardContent>
-                    </CardHeader>
-                </Card>
-            ) : (
-                <>
-                    <div className='flex justify-between items-center'>
-                        <h2 className=''>Hola, {user.email}</h2>
-                    </div>
-                </>
-            )}
+    const fetchPosts = async () => {
+    try {
+        const res = await client.get('/post')
+        setPosts(res.data.reverse())
+    } catch (error) {
+        console.error('Error al obtener posts:', error)
+    }
+    }
+
+    const handleCreate = async () => {
+    if (!title || !content) return
+    try {
+        await client.post('/post', {
+        title,
+        content,
+        user_id: user._id,
+        })
+        setTitle('')
+        setContent('')
+        fetchPosts()
+    } catch (error) {
+        console.error('Error al crear post:', error)
+    }
+    }
+
+    const handleUpdate = async (id) => {
+    try {
+        await client.put(`/post/${id}`, {
+        title,
+        content,
+        })
+        setEditPostId(null)
+        setTitle('')
+        setContent('')
+        fetchPosts()
+    } catch (error) {
+        console.error('Error al actualizar post:', error)
+    }
+    }
+
+    const handleDelete = async (id) => {
+    try {
+        await client.delete(`/post/${id}`)
+        fetchPosts()
+    } catch (error) {
+        console.error('Error al eliminar post:', error)
+    }
+    }
+
+    const startEdit = (post) => {
+    setEditPostId(post._id)
+    setTitle(post.title)
+    setContent(post.content)
+    }
+
+return (
+    <div className="container py-4">
+        <h2 className="mb-4">Crear nueva publicación</h2>
+        <div className="mb-3">
+        <input
+            type="text"
+            className="form-control mb-2"
+            placeholder="Título"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+        />
+        <textarea
+            className="form-control mb-2"
+            placeholder="Contenido"
+            rows={4}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+        />
+        {editPostId ? (
+            <button className="btn btn-warning" onClick={() => handleUpdate(editPostId)}>
+            Actualizar publicación
+            </button>
+        ) : (
+            <button className="btn btn-primary" onClick={handleCreate}>
+            Crear publicación
+            </button>
+        )}
         </div>
+
+        <hr className="my-4" />
+        <h3 className="mb-3">Publicaciones</h3>
+
+        {posts.map((post) => (
+        <div className="card mb-3" key={post._id}>
+            <div className="card-body">
+            <h5 className="card-title">{post.title}</h5>
+            <p className="card-text">{post.content}</p>
+            <p className="card-text">
+                <small className="text-muted">
+                {new Date(post.created_at).toLocaleString()}
+                </small>
+            </p>
+
+            {post.user_id === user._id && (
+                <div className="d-flex gap-2">
+                <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => startEdit(post)}
+                >
+                    Editar
+                </button>
+                <button
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => handleDelete(post._id)}
+                >
+                    Eliminar
+                </button>
+                </div>
+            )}
+            </div>
+        </div>
+        ))}
+    </div>
     )
 }
+
+export default PostList
