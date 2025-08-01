@@ -1,21 +1,59 @@
-import { useUser } from "../context/UserContext";
-import './Header.css'
+import { useUser } from "../context/UserContext"
+import { Navbar, Nav, Container, Button, Form } from 'react-bootstrap'
+import { Link, useNavigate } from 'react-router-dom'
 
-export default function Header() {
+const Header = ({onSearch}) => {
     const { user, logout } = useUser();
-    
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    }
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        const value = e.target.elements.search.value
+        onSearch?.(value)
+    }
+
     return (
-        <header>
-            {user ? (
-                <>
-                    <p>Hola, {user.name}</p>
-                    <button onClick={logout}>Cerrar sesión</button>
-                </>
-            ):(
-                <>
-                    <p>No has iniciado sesión</p>
-                </>
-            )}
-        </header>
-    );
+        <Navbar expand="lg" bg="light" className="shadow-sm mb-4">
+            <Container>
+                <Navbar.Brand as={Link} to="/">MI Blog</Navbar.Brand>
+                <Navbar.Toggle />
+                <Navbar.Collapse>
+                    <Nav className="me-auto">
+                        {user ? (
+                            <>
+                                <Nav.Link as={Link} to="/">Posts</Nav.Link>
+                            </>
+                        ) : (
+                            <>
+                                <Nav.Link as={Link} to="/login">Login</Nav.Link>
+                                <Nav.Link as={Link} to="/register">Registros</Nav.Link>
+                            </>
+                        )}
+                    </Nav>
+                    {user && (
+                        <>
+                            <Form className="d-flex me-2" onSubmit={handleSearch}>
+                                <Form.Control 
+                                    type="search"
+                                    placeholder="Biscar titulo..."
+                                    name="search"
+                                />
+                            </Form>
+                            <Button variant="outline-danger" onClick={handleLogout}>
+                                Cerrar Sesion
+                            </Button>
+                        </>
+                    )}
+                </Navbar.Collapse>
+            </Container>
+        </Navbar>
+    )
+
 }
+
+export default Header
